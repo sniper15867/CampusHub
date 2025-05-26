@@ -9,7 +9,305 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      community_participants: {
+        Row: {
+          id: string
+          joined_at: string | null
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string | null
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string | null
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_participants_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_posts: {
+        Row: {
+          activity_type: Database["public"]["Enums"]["activity_type"]
+          created_at: string | null
+          creator_id: string
+          current_participants: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          location: string | null
+          max_participants: number | null
+          scheduled_at: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          activity_type: Database["public"]["Enums"]["activity_type"]
+          created_at?: string | null
+          creator_id: string
+          current_participants?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          max_participants?: number | null
+          scheduled_at?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          activity_type?: Database["public"]["Enums"]["activity_type"]
+          created_at?: string | null
+          creator_id?: string
+          current_participants?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          max_participants?: number | null
+          scheduled_at?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_posts_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grades: {
+        Row: {
+          academic_year: string | null
+          course_code: string | null
+          course_name: string
+          created_at: string | null
+          credits: number | null
+          grade: string | null
+          id: string
+          percentage: number | null
+          semester: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          academic_year?: string | null
+          course_code?: string | null
+          course_name: string
+          created_at?: string | null
+          credits?: number | null
+          grade?: string | null
+          id?: string
+          percentage?: number | null
+          semester?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          academic_year?: string | null
+          course_code?: string | null
+          course_name?: string
+          created_at?: string | null
+          credits?: number | null
+          grade?: string | null
+          id?: string
+          percentage?: number | null
+          semester?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grades_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_items: {
+        Row: {
+          category: Database["public"]["Enums"]["item_category"]
+          condition: Database["public"]["Enums"]["item_condition"]
+          created_at: string | null
+          description: string | null
+          id: string
+          images: string[] | null
+          is_available: boolean | null
+          location: string | null
+          price: number
+          seller_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["item_category"]
+          condition: Database["public"]["Enums"]["item_condition"]
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          is_available?: boolean | null
+          location?: string | null
+          price: number
+          seller_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["item_category"]
+          condition?: Database["public"]["Enums"]["item_condition"]
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          is_available?: boolean | null
+          location?: string | null
+          price?: number
+          seller_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_items_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          academic_year: Database["public"]["Enums"]["academic_year"] | null
+          avatar_url: string | null
+          college_name: string | null
+          created_at: string | null
+          email: string
+          first_name: string
+          id: string
+          interests: string[] | null
+          is_verified: boolean | null
+          last_name: string
+          major: string | null
+          updated_at: string | null
+          verification_document_url: string | null
+        }
+        Insert: {
+          academic_year?: Database["public"]["Enums"]["academic_year"] | null
+          avatar_url?: string | null
+          college_name?: string | null
+          created_at?: string | null
+          email: string
+          first_name: string
+          id: string
+          interests?: string[] | null
+          is_verified?: boolean | null
+          last_name: string
+          major?: string | null
+          updated_at?: string | null
+          verification_document_url?: string | null
+        }
+        Update: {
+          academic_year?: Database["public"]["Enums"]["academic_year"] | null
+          avatar_url?: string | null
+          college_name?: string | null
+          created_at?: string | null
+          email?: string
+          first_name?: string
+          id?: string
+          interests?: string[] | null
+          is_verified?: boolean | null
+          last_name?: string
+          major?: string | null
+          updated_at?: string | null
+          verification_document_url?: string | null
+        }
+        Relationships: []
+      }
+      timetable_entries: {
+        Row: {
+          academic_year: string | null
+          course_code: string | null
+          course_name: string
+          created_at: string | null
+          day_of_week: number | null
+          end_time: string
+          id: string
+          instructor: string | null
+          location: string | null
+          semester: string | null
+          start_time: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          academic_year?: string | null
+          course_code?: string | null
+          course_name: string
+          created_at?: string | null
+          day_of_week?: number | null
+          end_time: string
+          id?: string
+          instructor?: string | null
+          location?: string | null
+          semester?: string | null
+          start_time: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          academic_year?: string | null
+          course_code?: string | null
+          course_name?: string
+          created_at?: string | null
+          day_of_week?: number | null
+          end_time?: string
+          id?: string
+          instructor?: string | null
+          location?: string | null
+          semester?: string | null
+          start_time?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timetable_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +316,16 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      academic_year: "freshman" | "sophomore" | "junior" | "senior" | "graduate"
+      activity_type: "study" | "social" | "sports" | "events" | "other"
+      item_category:
+        | "books"
+        | "electronics"
+        | "clothes"
+        | "furniture"
+        | "sports"
+        | "other"
+      item_condition: "new" | "like_new" | "good" | "fair" | "poor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +440,18 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      academic_year: ["freshman", "sophomore", "junior", "senior", "graduate"],
+      activity_type: ["study", "social", "sports", "events", "other"],
+      item_category: [
+        "books",
+        "electronics",
+        "clothes",
+        "furniture",
+        "sports",
+        "other",
+      ],
+      item_condition: ["new", "like_new", "good", "fair", "poor"],
+    },
   },
 } as const

@@ -1,4 +1,3 @@
-
 import { Calendar, Clock, BookOpen, TrendingUp, FileText, Bell } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,7 +39,7 @@ const Academic = () => {
     { course: 'English Literature', grade: 'B', percentage: 82, credits: 3 },
   ];
 
-  const currentGPA = 3.67;
+  const currentGPA = 8.67;
 
   return (
     <div className="p-6 space-y-6">

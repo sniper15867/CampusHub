@@ -23,7 +23,7 @@ const Profile = () => {
     stats: {
       itemsSold: 12,
       activitiesJoined: 8,
-      currentGPA: 3.67,
+      currentGPA: 8.67,
     },
   };
 

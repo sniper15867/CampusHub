@@ -1,95 +1,80 @@
 
 import { useState } from 'react';
-import { Search, Plus, Filter, CreditCard } from 'lucide-react';
+import { Search, Plus, CreditCard, Trash2, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useMarketplace } from '@/hooks/useMarketplace';
+import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/hooks/useAuth';
+import AddItemForm from './AddItemForm';
 
 const Marketplace = () => {
+  const { user } = useAuth();
+  const { profile } = useProfile();
+  const { items, loading, createItem, deleteItem } = useMarketplace();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showAddForm, setShowAddForm] = useState(false);
 
-  const categories = [
-    { id: 'all', label: 'All Items' },
-    { id: 'books', label: 'Books' },
-    { id: 'electronics', label: 'Electronics' },
-    { id: 'clothes', label: 'Clothes' },
-    { id: 'furniture', label: 'Furniture' },
-  ];
+  const filteredItems = items.filter(item =>
+    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
-  const mockItems = [
-    {
-      id: 1,
-      title: 'Calculus Textbook',
-      price: 45,
-      category: 'books',
-      image: '/placeholder.svg',
-      seller: 'Sarah M.',
-      condition: 'Good',
-    },
-    {
-      id: 2,
-      title: 'MacBook Air M1',
-      price: 800,
-      category: 'electronics',
-      image: '/placeholder.svg',
-      seller: 'Mike D.',
-      condition: 'Excellent',
-    },
-    {
-      id: 3,
-      title: 'Winter Jacket',
-      price: 30,
-      category: 'clothes',
-      image: '/placeholder.svg',
-      seller: 'Emma L.',
-      condition: 'Like New',
-    },
-    {
-      id: 4,
-      title: 'Desk Lamp',
-      price: 15,
-      category: 'furniture',
-      image: '/placeholder.svg',
-      seller: 'Alex K.',
-      condition: 'Good',
-    },
-  ];
+  const handleAddItem = async (itemData: {
+    title: string;
+    description: string;
+    price: number;
+    image_urls: string[];
+  }) => {
+    await createItem(itemData);
+    setShowAddForm(false);
+  };
 
-  const filteredItems = mockItems.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const handleDeleteItem = async (itemId: string) => {
+    if (window.confirm('Are you sure you want to delete this item?')) {
+      await deleteItem(itemId);
+    }
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(price);
+  };
+
+  const getSellerName = (sellerId: string) => {
+    if (sellerId === user?.id && profile) {
+      return `${profile.first_name} ${profile.last_name}`;
+    }
+    return 'Unknown Seller';
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-gray-200 rounded"></div>
+          <div className="h-32 bg-gray-200 rounded"></div>
+          <div className="h-48 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
-      {/* Search and Filters */}
-      <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <Input
-            placeholder="Search marketplace..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        <div className="flex space-x-2 overflow-x-auto pb-2">
-          {categories.map((category) => (
-            <Button
-              key={category.id}
-              variant={selectedCategory === category.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory(category.id)}
-              className="whitespace-nowrap"
-            >
-              {category.label}
-            </Button>
-          ))}
-        </div>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+        <Input
+          placeholder="Search marketplace..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
       </div>
 
       {/* Payment Portal Banner */}
@@ -103,49 +88,101 @@ const Marketplace = () => {
         </div>
       </div>
 
-      {/* Add Item Button */}
-      <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-        <Plus size={20} className="mr-2" />
-        List New Item
-      </Button>
+      {/* Add Item Form or Button */}
+      {showAddForm ? (
+        <AddItemForm
+          onSubmit={handleAddItem}
+          onCancel={() => setShowAddForm(false)}
+        />
+      ) : (
+        <Button 
+          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          onClick={() => setShowAddForm(true)}
+        >
+          <Plus size={20} className="mr-2" />
+          List New Item
+        </Button>
+      )}
 
       {/* Items Grid */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800">Available Items</h2>
-        <div className="grid gap-4">
-          {filteredItems.map((item) => (
-            <Card key={item.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{item.title}</CardTitle>
-                  <Badge variant="secondary">{item.condition}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-400">Image</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-2xl font-bold text-green-600">${item.price}</span>
-                  <span className="text-sm text-gray-600">by {item.seller}</span>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full" variant="outline">
-                  Contact Seller
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* API Integration Placeholder */}
-      <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-        <h3 className="font-semibold text-yellow-800 mb-2">🔌 API Integration Ready</h3>
-        <p className="text-sm text-yellow-700">
-          Payment processing and inventory management APIs can be integrated here.
-        </p>
+        <h2 className="text-lg font-semibold text-gray-800">
+          Available Items ({filteredItems.length})
+        </h2>
+        
+        {filteredItems.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            {searchQuery ? 'No items match your search.' : 'No items available yet.'}
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {filteredItems.map((item) => (
+              <Card key={item.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-lg">{item.title}</CardTitle>
+                    {item.seller_id === user?.id && (
+                      <div className="flex space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteItem(item.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {item.description && (
+                    <p className="text-sm text-gray-600">{item.description}</p>
+                  )}
+                  
+                  {item.image_urls && item.image_urls.length > 0 ? (
+                    <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                      <img
+                        src={item.image_urls[0]}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <div className="hidden w-full h-full flex items-center justify-center">
+                        <span className="text-gray-400">Image unavailable</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+                      <span className="text-gray-400">No image</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-2xl font-bold text-green-600">
+                      {formatPrice(Number(item.price))}
+                    </span>
+                    <span className="text-sm text-gray-600">
+                      by {getSellerName(item.seller_id)}
+                    </span>
+                  </div>
+                  
+                  <div className="text-xs text-gray-500">
+                    Listed {new Date(item.created_at).toLocaleDateString()}
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button className="w-full" variant="outline">
+                    Contact Seller
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

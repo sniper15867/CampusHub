@@ -153,46 +153,31 @@ export type Database = {
       }
       marketplace_items: {
         Row: {
-          category: Database["public"]["Enums"]["item_category"]
-          condition: Database["public"]["Enums"]["item_condition"]
-          created_at: string | null
+          created_at: string
           description: string | null
           id: string
-          images: string[] | null
-          is_available: boolean | null
-          location: string | null
+          image_urls: string[] | null
           price: number
           seller_id: string
           title: string
-          updated_at: string | null
         }
         Insert: {
-          category: Database["public"]["Enums"]["item_category"]
-          condition: Database["public"]["Enums"]["item_condition"]
-          created_at?: string | null
+          created_at?: string
           description?: string | null
           id?: string
-          images?: string[] | null
-          is_available?: boolean | null
-          location?: string | null
+          image_urls?: string[] | null
           price: number
           seller_id: string
           title: string
-          updated_at?: string | null
         }
         Update: {
-          category?: Database["public"]["Enums"]["item_category"]
-          condition?: Database["public"]["Enums"]["item_condition"]
-          created_at?: string | null
+          created_at?: string
           description?: string | null
           id?: string
-          images?: string[] | null
-          is_available?: boolean | null
-          location?: string | null
+          image_urls?: string[] | null
           price?: number
           seller_id?: string
           title?: string
-          updated_at?: string | null
         }
         Relationships: [
           {

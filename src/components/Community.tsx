@@ -1,20 +1,24 @@
-
+// Update the Community component to include chat functionality
 import { useState } from 'react';
-import { Search, MapPin, Calendar, Users, Trash2 } from 'lucide-react';
+import { Search, MapPin, Calendar, Users, Trash2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCommunity } from '@/hooks/useCommunity';
 import { useAuth } from '@/hooks/useAuth';
+import { useChat } from '@/hooks/useChat';
 import CreatePostForm from './CreatePostForm';
+import ChatDialog from './ChatDialog';
 
 const Community = () => {
   const { user } = useAuth();
   const { posts, loading, createPost, deletePost } = useCommunity();
+  const { createThread } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedActivity, setSelectedActivity] = useState('all');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [activeChat, setActiveChat] = useState<string | null>(null);
 
   const activityTypes = [
     { id: 'all', label: 'All' },
@@ -41,6 +45,13 @@ const Community = () => {
     setShowCreateForm(false);
   };
 
+  const handleStartChat = async (postId: string) => {
+    const threadId = await createThread(undefined, postId);
+    if (threadId) {
+      setActiveChat(threadId);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -63,7 +74,6 @@ const Community = () => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Search and Filters */}
       <div className="space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -90,7 +100,6 @@ const Community = () => {
         </div>
       </div>
 
-      {/* Create Activity */}
       {user && (
         <Button 
           className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
@@ -101,7 +110,6 @@ const Community = () => {
         </Button>
       )}
 
-      {/* Activities List */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-gray-800">Discover Activities</h2>
         
@@ -168,7 +176,12 @@ const Community = () => {
                     <Button className="flex-1" size="sm">
                       Join Activity
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleStartChat(post.id)}
+                    >
+                      <MessageCircle size={16} className="mr-2" />
                       Message Creator
                     </Button>
                   </div>
@@ -178,6 +191,14 @@ const Community = () => {
           </div>
         )}
       </div>
+
+      {activeChat && (
+        <ChatDialog
+          threadId={activeChat}
+          open={!!activeChat}
+          onOpenChange={(open) => !open && setActiveChat(null)}
+        />
+      )}
     </div>
   );
 };

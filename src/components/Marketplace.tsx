@@ -1,6 +1,6 @@
-
+// Update the Marketplace component to include chat functionality
 import { useState } from 'react';
-import { Search, Plus, CreditCard, Trash2, Edit } from 'lucide-react';
+import { Search, Plus, CreditCard, Trash2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,14 +8,18 @@ import { Badge } from '@/components/ui/badge';
 import { useMarketplace } from '@/hooks/useMarketplace';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
+import { useChat } from '@/hooks/useChat';
 import AddItemForm from './AddItemForm';
+import ChatDialog from './ChatDialog';
 
 const Marketplace = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { items, loading, createItem, deleteItem } = useMarketplace();
+  const { createThread } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [activeChat, setActiveChat] = useState<string | null>(null);
 
   const filteredItems = items.filter(item =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -35,6 +39,13 @@ const Marketplace = () => {
   const handleDeleteItem = async (itemId: string) => {
     if (window.confirm('Are you sure you want to delete this item?')) {
       await deleteItem(itemId);
+    }
+  };
+
+  const handleStartChat = async (itemId: string) => {
+    const threadId = await createThread(itemId);
+    if (threadId) {
+      setActiveChat(threadId);
     }
   };
 
@@ -66,7 +77,6 @@ const Marketplace = () => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
         <Input
@@ -77,7 +87,6 @@ const Marketplace = () => {
         />
       </div>
 
-      {/* Payment Portal Banner */}
       <div className="bg-gradient-to-r from-green-100 to-blue-100 p-4 rounded-lg border border-green-200">
         <div className="flex items-center space-x-3">
           <CreditCard className="text-green-600" size={24} />
@@ -88,7 +97,6 @@ const Marketplace = () => {
         </div>
       </div>
 
-      {/* Add Item Form or Button */}
       {showAddForm ? (
         <AddItemForm
           onSubmit={handleAddItem}
@@ -104,7 +112,6 @@ const Marketplace = () => {
         </Button>
       )}
 
-      {/* Items Grid */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-gray-800">
           Available Items ({filteredItems.length})
@@ -175,8 +182,13 @@ const Marketplace = () => {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button className="w-full" variant="outline">
-                    Contact Seller
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    onClick={() => handleStartChat(item.id)}
+                  >
+                    <MessageCircle size={16} className="mr-2" />
+                    Message Seller
                   </Button>
                 </CardFooter>
               </Card>
@@ -184,6 +196,14 @@ const Marketplace = () => {
           </div>
         )}
       </div>
+
+      {activeChat && (
+        <ChatDialog
+          threadId={activeChat}
+          open={!!activeChat}
+          onOpenChange={(open) => !open && setActiveChat(null)}
+        />
+      )}
     </div>
   );
 };

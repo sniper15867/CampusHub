@@ -9,92 +9,38 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      community_participants: {
+      community_posts: {
         Row: {
+          activity_type: string
+          created_at: string
+          description: string | null
           id: string
-          joined_at: string | null
-          post_id: string
+          interest_tags: string[] | null
+          title: string
           user_id: string
         }
         Insert: {
+          activity_type: string
+          created_at?: string
+          description?: string | null
           id?: string
-          joined_at?: string | null
-          post_id: string
+          interest_tags?: string[] | null
+          title: string
           user_id: string
         }
         Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string | null
           id?: string
-          joined_at?: string | null
-          post_id?: string
+          interest_tags?: string[] | null
+          title?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "community_participants_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "community_posts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "community_participants_user_id_fkey"
+            foreignKeyName: "community_posts_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      community_posts: {
-        Row: {
-          activity_type: Database["public"]["Enums"]["activity_type"]
-          created_at: string | null
-          creator_id: string
-          current_participants: number | null
-          description: string | null
-          id: string
-          is_active: boolean | null
-          location: string | null
-          max_participants: number | null
-          scheduled_at: string | null
-          tags: string[] | null
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          activity_type: Database["public"]["Enums"]["activity_type"]
-          created_at?: string | null
-          creator_id: string
-          current_participants?: number | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          location?: string | null
-          max_participants?: number | null
-          scheduled_at?: string | null
-          tags?: string[] | null
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          activity_type?: Database["public"]["Enums"]["activity_type"]
-          created_at?: string | null
-          creator_id?: string
-          current_participants?: number | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          location?: string | null
-          max_participants?: number | null
-          scheduled_at?: string | null
-          tags?: string[] | null
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "community_posts_creator_id_fkey"
-            columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

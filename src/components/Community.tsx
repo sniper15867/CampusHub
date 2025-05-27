@@ -1,14 +1,20 @@
 
 import { useState } from 'react';
-import { Search, Filter, MapPin, Calendar, Users } from 'lucide-react';
+import { Search, MapPin, Calendar, Users, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCommunity } from '@/hooks/useCommunity';
+import { useAuth } from '@/hooks/useAuth';
+import CreatePostForm from './CreatePostForm';
 
 const Community = () => {
+  const { user } = useAuth();
+  const { posts, loading, createPost, deletePost } = useCommunity();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedActivity, setSelectedActivity] = useState('all');
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const activityTypes = [
     { id: 'all', label: 'All' },
@@ -18,63 +24,42 @@ const Community = () => {
     { id: 'events', label: 'Events' },
   ];
 
-  const mockActivities = [
-    {
-      id: 1,
-      title: 'Calculus Study Group',
-      type: 'study',
-      creator: 'Maria S.',
-      participants: 4,
-      maxParticipants: 8,
-      location: 'Library Room 205',
-      time: 'Today 7:00 PM',
-      description: 'Preparing for midterm exam, all welcome!',
-      interests: ['Math', 'Study Group'],
-    },
-    {
-      id: 2,
-      title: 'Basketball Pickup Game',
-      type: 'sports',
-      creator: 'James R.',
-      participants: 6,
-      maxParticipants: 10,
-      location: 'Campus Gym',
-      time: 'Tomorrow 4:00 PM',
-      description: 'Casual basketball game, all skill levels welcome.',
-      interests: ['Basketball', 'Sports'],
-    },
-    {
-      id: 3,
-      title: 'Coffee & Code',
-      type: 'social',
-      creator: 'Alex P.',
-      participants: 3,
-      maxParticipants: 6,
-      location: 'Campus Café',
-      time: 'Friday 2:00 PM',
-      description: 'Coding session with coffee and good vibes.',
-      interests: ['Programming', 'Coffee'],
-    },
-    {
-      id: 4,
-      title: 'Music Festival Meetup',
-      type: 'events',
-      creator: 'Lisa M.',
-      participants: 12,
-      maxParticipants: 20,
-      location: 'Student Center',
-      time: 'Saturday 6:00 PM',
-      description: 'Planning trip to upcoming music festival.',
-      interests: ['Music', 'Events'],
-    },
-  ];
-
-  const filteredActivities = mockActivities.filter(activity => {
-    const matchesSearch = activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         activity.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesActivity = selectedActivity === 'all' || activity.type === selectedActivity;
+  const filteredPosts = posts.filter(post => {
+    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (post.description && post.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesActivity = selectedActivity === 'all' || post.activity_type === selectedActivity;
     return matchesSearch && matchesActivity;
   });
+
+  const handleCreatePost = async (postData: {
+    title: string;
+    description: string;
+    activity_type: string;
+    interest_tags: string[];
+  }) => {
+    await createPost(postData);
+    setShowCreateForm(false);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (showCreateForm) {
+    return (
+      <div className="p-6">
+        <CreatePostForm
+          onSubmit={handleCreatePost}
+          onCancel={() => setShowCreateForm(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -106,75 +91,92 @@ const Community = () => {
       </div>
 
       {/* Create Activity */}
-      <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-        <Users size={20} className="mr-2" />
-        Create New Activity
-      </Button>
+      {user && (
+        <Button 
+          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+          onClick={() => setShowCreateForm(true)}
+        >
+          <Users size={20} className="mr-2" />
+          Create New Activity
+        </Button>
+      )}
 
       {/* Activities List */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-gray-800">Discover Activities</h2>
-        <div className="space-y-4">
-          {filteredActivities.map((activity) => (
-            <Card key={activity.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{activity.title}</CardTitle>
-                  <Badge 
-                    variant={activity.type === 'study' ? 'default' : 
-                            activity.type === 'sports' ? 'destructive' :
-                            activity.type === 'social' ? 'secondary' : 'outline'}
-                  >
-                    {activity.type}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-gray-600 text-sm">{activity.description}</p>
-                
-                <div className="flex flex-wrap gap-1">
-                  {activity.interests.map((interest, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {interest}
-                    </Badge>
-                  ))}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <MapPin size={16} className="mr-2" />
-                    {activity.location}
+        
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-gray-500">Loading activities...</p>
+          </div>
+        ) : filteredPosts.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No activities found. Be the first to create one!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredPosts.map((post) => (
+              <Card key={post.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-lg">{post.title}</CardTitle>
+                    <div className="flex items-center space-x-2">
+                      <Badge 
+                        variant={post.activity_type === 'study' ? 'default' : 
+                                post.activity_type === 'sports' ? 'destructive' :
+                                post.activity_type === 'social' ? 'secondary' : 'outline'}
+                      >
+                        {post.activity_type}
+                      </Badge>
+                      {user && user.id === post.user_id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deletePost(post.id)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Calendar size={16} className="mr-2" />
-                    {activity.time}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Users size={16} className="mr-2" />
-                    {activity.participants}/{activity.maxParticipants} participants
-                  </div>
-                </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {post.description && (
+                    <p className="text-gray-600 text-sm">{post.description}</p>
+                  )}
+                  
+                  {post.interest_tags && post.interest_tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {post.interest_tags.map((tag, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
 
-                <div className="flex space-x-2 pt-2">
-                  <Button className="flex-1" size="sm">
-                    Join Activity
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    Message Creator
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Calendar size={16} className="mr-2" />
+                      Created {formatDate(post.created_at)}
+                    </div>
+                  </div>
 
-      {/* Interest Filters Placeholder */}
-      <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-        <h3 className="font-semibold text-blue-800 mb-2">🎯 Smart Matching</h3>
-        <p className="text-sm text-blue-700">
-          Advanced interest-based filtering and recommendation system will be integrated here.
-        </p>
+                  <div className="flex space-x-2 pt-2">
+                    <Button className="flex-1" size="sm">
+                      Join Activity
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      Message Creator
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

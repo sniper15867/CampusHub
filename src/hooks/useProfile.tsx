@@ -2,6 +2,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import type { Database } from '@/integrations/supabase/types';
+
+type DatabaseProfile = Database['public']['Tables']['profiles']['Row'];
+type DatabaseProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
 interface Profile {
   id: string;
@@ -10,7 +14,7 @@ interface Profile {
   last_name: string;
   college_name?: string;
   major?: string;
-  academic_year?: string;
+  academic_year?: 'freshman' | 'sophomore' | 'junior' | 'senior' | 'graduate';
   interests?: string[];
   avatar_url?: string;
   is_verified: boolean;
@@ -49,7 +53,7 @@ export const useProfile = () => {
     }
   };
 
-  const updateProfile = async (updates: Partial<Profile>) => {
+  const updateProfile = async (updates: DatabaseProfileUpdate) => {
     if (!user) return;
 
     try {

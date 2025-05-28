@@ -100,17 +100,25 @@ export const useMessaging = ({ chatId }: UseMessagingProps = {}) => {
         table: 'typing_indicators',
         filter: `chat_id=eq.${chatId}`,
       }, (payload) => {
-        if (payload.eventType === 'DELETE' || !payload.new.is_typing) {
-          setTypingUsers(prev => {
-            const updated = { ...prev };
-            delete updated[payload.old?.user_id || payload.new?.user_id];
-            return updated;
-          });
-        } else if (payload.new.user_id !== user?.id) {
-          setTypingUsers(prev => ({
-            ...prev,
-            [payload.new.user_id]: payload.new.is_typing,
-          }));
+        console.log('Typing payload:', payload);
+        
+        if (payload.eventType === 'DELETE') {
+          const oldRecord = payload.old as TypingIndicator;
+          if (oldRecord?.user_id) {
+            setTypingUsers(prev => {
+              const updated = { ...prev };
+              delete updated[oldRecord.user_id];
+              return updated;
+            });
+          }
+        } else if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const newRecord = payload.new as TypingIndicator;
+          if (newRecord?.user_id && newRecord.user_id !== user?.id) {
+            setTypingUsers(prev => ({
+              ...prev,
+              [newRecord.user_id]: newRecord.is_typing,
+            }));
+          }
         }
       })
       .subscribe();

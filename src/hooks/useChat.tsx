@@ -1,41 +1,41 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import type { Database } from '@/integrations/supabase/types';
 
+type Chat = Database['public']['Tables']['chats']['Row'];
 type Message = Database['public']['Tables']['messages']['Row'];
-type Thread = Database['public']['Tables']['chat_threads']['Row'];
-type Participant = Database['public']['Tables']['chat_participants']['Row'];
 
-export const useChat = (threadId?: string) => {
+interface UseChatProps {
+  chatId?: string;
+}
+
+export const useChat = ({ chatId }: UseChatProps = {}) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [typing, setTyping] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    if (threadId) {
+    if (chatId) {
       fetchMessages();
-      fetchParticipants();
       subscribeToMessages();
-      subscribeToTyping();
     }
     return () => {
       supabase.removeAllChannels();
     };
-  }, [threadId]);
+  }, [chatId]);
 
   const fetchMessages = async () => {
-    if (!threadId) return;
+    if (!chatId) return;
     
     try {
       const { data, error } = await supabase
         .from('messages')
         .select('*')
-        .eq('thread_id', threadId)
+        .eq('chat_id', chatId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -52,53 +52,28 @@ export const useChat = (threadId?: string) => {
     }
   };
 
-  const fetchParticipants = async () => {
-    if (!threadId) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('chat_participants')
-        .select('*')
-        .eq('thread_id', threadId);
-
-      if (error) throw error;
-      setParticipants(data || []);
-    } catch (error) {
-      console.error('Error fetching participants:', error);
-    }
-  };
-
   const subscribeToMessages = () => {
-    if (!threadId) return;
+    if (!chatId) return;
 
     const channel = supabase
-      .channel(`thread:${threadId}`)
+      .channel(`messages:${chatId}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'messages',
-        filter: `thread_id=eq.${threadId}`,
+        filter: `chat_id=eq.${chatId}`,
       }, (payload) => {
         setMessages(prev => [...prev, payload.new as Message]);
-        markMessageAsSeen(payload.new.id);
       })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
-  const subscribeToTyping = () => {
-    if (!threadId) return;
-
-    const channel = supabase
-      .channel(`typing:${threadId}`)
-      .on('broadcast', { event: 'typing' }, ({ payload }) => {
-        setTyping(prev => ({
-          ...prev,
-          [payload.userId]: payload.isTyping,
-        }));
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `chat_id=eq.${chatId}`,
+      }, (payload) => {
+        setMessages(prev => prev.map(msg => 
+          msg.id === payload.new.id ? payload.new as Message : msg
+        ));
       })
       .subscribe();
 
@@ -108,13 +83,13 @@ export const useChat = (threadId?: string) => {
   };
 
   const sendMessage = async (content: string) => {
-    if (!threadId || !user || !content.trim()) return;
+    if (!chatId || !user || !content.trim()) return;
 
     try {
       const { error } = await supabase
         .from('messages')
         .insert({
-          thread_id: threadId,
+          chat_id: chatId,
           sender_id: user.id,
           content: content.trim(),
         });
@@ -130,83 +105,78 @@ export const useChat = (threadId?: string) => {
     }
   };
 
-  const markMessageAsSeen = async (messageId: string) => {
+  const markAsRead = async (messageId: string) => {
     if (!user) return;
 
     try {
       const { error } = await supabase
         .from('messages')
         .update({
-          is_seen: true,
-          seen_at: new Date().toISOString(),
+          is_read: true,
+          read_at: new Date().toISOString(),
         })
         .eq('id', messageId);
 
       if (error) throw error;
     } catch (error) {
-      console.error('Error marking message as seen:', error);
+      console.error('Error marking message as read:', error);
     }
   };
 
-  const createThread = async (itemId?: string, postId?: string) => {
-    if (!user || (!itemId && !postId)) return null;
+  const createOrGetChat = async (
+    type: 'community_post' | 'marketplace_item',
+    referenceId: string,
+    participantId: string
+  ) => {
+    if (!user) return null;
 
     try {
-      // Create thread
-      const { data: threadData, error: threadError } = await supabase
-        .from('chat_threads')
+      // Try to find existing chat
+      const { data: existingChat, error: fetchError } = await supabase
+        .from('chats')
+        .select('*')
+        .eq('type', type)
+        .eq('reference_id', referenceId)
+        .or(`and(creator_id.eq.${user.id},participant_id.eq.${participantId}),and(creator_id.eq.${participantId},participant_id.eq.${user.id})`)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
+      if (existingChat) {
+        return existingChat.id;
+      }
+
+      // Create new chat
+      const { data: newChat, error: createError } = await supabase
+        .from('chats')
         .insert({
-          item_id: itemId,
-          post_id: postId,
+          type,
+          reference_id: referenceId,
+          creator_id: user.id,
+          participant_id: participantId,
         })
         .select()
         .single();
 
-      if (threadError) throw threadError;
+      if (createError) throw createError;
 
-      // Add participants
-      const { error: participantError } = await supabase
-        .from('chat_participants')
-        .insert({
-          thread_id: threadData.id,
-          user_id: user.id,
-        });
-
-      if (participantError) throw participantError;
-
-      return threadData.id;
+      return newChat.id;
     } catch (error) {
-      console.error('Error creating chat thread:', error);
+      console.error('Error creating/getting chat:', error);
       toast({
         title: "Error",
-        description: "Failed to create chat",
+        description: "Failed to start chat",
         variant: "destructive",
       });
       return null;
     }
   };
 
-  const setUserTyping = async (isTyping: boolean) => {
-    if (!threadId || !user) return;
-
-    const channel = supabase.channel(`typing:${threadId}`);
-    await channel.send({
-      type: 'broadcast',
-      event: 'typing',
-      payload: {
-        userId: user.id,
-        isTyping,
-      },
-    });
-  };
-
   return {
     messages,
-    participants,
     loading,
-    typing,
     sendMessage,
-    createThread,
-    setUserTyping,
+    markAsRead,
+    createOrGetChat,
   };
 };

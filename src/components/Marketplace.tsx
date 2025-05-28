@@ -1,4 +1,4 @@
-// Update the Marketplace component to include chat functionality
+
 import { useState } from 'react';
 import { Search, Plus, CreditCard, Trash2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useMarketplace } from '@/hooks/useMarketplace';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
-import { useChat } from '@/hooks/useChat';
+import { useMessaging } from '@/hooks/useMessaging';
 import AddItemForm from './AddItemForm';
 import ChatDialog from './ChatDialog';
 
@@ -16,10 +16,13 @@ const Marketplace = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { items, loading, createItem, deleteItem } = useMarketplace();
-  const { createThread } = useChat();
+  const { createOrGetChat } = useMessaging();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [activeChat, setActiveChat] = useState<string | null>(null);
+  const [activeChat, setActiveChat] = useState<{
+    chatId: string;
+    title: string;
+  } | null>(null);
 
   const filteredItems = items.filter(item =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -42,10 +45,15 @@ const Marketplace = () => {
     }
   };
 
-  const handleStartChat = async (itemId: string) => {
-    const threadId = await createThread(itemId);
-    if (threadId) {
-      setActiveChat(threadId);
+  const handleStartChat = async (itemId: string, itemTitle: string, sellerId: string) => {
+    if (!user || sellerId === user.id) return;
+    
+    const chatId = await createOrGetChat('marketplace_item', itemId, sellerId);
+    if (chatId) {
+      setActiveChat({
+        chatId,
+        title: `Chat about: ${itemTitle}`,
+      });
     }
   };
 
@@ -182,14 +190,20 @@ const Marketplace = () => {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    onClick={() => handleStartChat(item.id)}
-                  >
-                    <MessageCircle size={16} className="mr-2" />
-                    Message Seller
-                  </Button>
+                  {user && user.id !== item.seller_id ? (
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => handleStartChat(item.id, item.title, item.seller_id)}
+                    >
+                      <MessageCircle size={16} className="mr-2" />
+                      Message Seller
+                    </Button>
+                  ) : (
+                    <div className="w-full text-center text-gray-500 text-sm">
+                      Your listing
+                    </div>
+                  )}
                 </CardFooter>
               </Card>
             ))}
@@ -199,7 +213,8 @@ const Marketplace = () => {
 
       {activeChat && (
         <ChatDialog
-          threadId={activeChat}
+          chatId={activeChat.chatId}
+          title={activeChat.title}
           open={!!activeChat}
           onOpenChange={(open) => !open && setActiveChat(null)}
         />

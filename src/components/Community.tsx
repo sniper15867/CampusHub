@@ -1,4 +1,4 @@
-// Update the Community component to include chat functionality
+
 import { useState } from 'react';
 import { Search, MapPin, Calendar, Users, Trash2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,18 +7,21 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCommunity } from '@/hooks/useCommunity';
 import { useAuth } from '@/hooks/useAuth';
-import { useChat } from '@/hooks/useChat';
+import { useMessaging } from '@/hooks/useMessaging';
 import CreatePostForm from './CreatePostForm';
 import ChatDialog from './ChatDialog';
 
 const Community = () => {
   const { user } = useAuth();
   const { posts, loading, createPost, deletePost } = useCommunity();
-  const { createThread } = useChat();
+  const { createOrGetChat } = useMessaging();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedActivity, setSelectedActivity] = useState('all');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [activeChat, setActiveChat] = useState<string | null>(null);
+  const [activeChat, setActiveChat] = useState<{
+    chatId: string;
+    title: string;
+  } | null>(null);
 
   const activityTypes = [
     { id: 'all', label: 'All' },
@@ -45,10 +48,15 @@ const Community = () => {
     setShowCreateForm(false);
   };
 
-  const handleStartChat = async (postId: string) => {
-    const threadId = await createThread(undefined, postId);
-    if (threadId) {
-      setActiveChat(threadId);
+  const handleStartChat = async (postId: string, postTitle: string, postUserId: string) => {
+    if (!user || postUserId === user.id) return;
+    
+    const chatId = await createOrGetChat('community_post', postId, postUserId);
+    if (chatId) {
+      setActiveChat({
+        chatId,
+        title: `Chat about: ${postTitle}`,
+      });
     }
   };
 
@@ -176,14 +184,16 @@ const Community = () => {
                     <Button className="flex-1" size="sm">
                       Join Activity
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleStartChat(post.id)}
-                    >
-                      <MessageCircle size={16} className="mr-2" />
-                      Message Creator
-                    </Button>
+                    {user && user.id !== post.user_id && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleStartChat(post.id, post.title, post.user_id)}
+                      >
+                        <MessageCircle size={16} className="mr-2" />
+                        Message Creator
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -194,7 +204,8 @@ const Community = () => {
 
       {activeChat && (
         <ChatDialog
-          threadId={activeChat}
+          chatId={activeChat.chatId}
+          title={activeChat.title}
           open={!!activeChat}
           onOpenChange={(open) => !open && setActiveChat(null)}
         />
